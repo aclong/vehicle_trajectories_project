@@ -1,5 +1,11 @@
 .csv
 .tif
+.tfw
+.dbf
+.sbn
+.sbx
+.shp
+.shx
 .Rproj.user
 .Rhistory
 .RData
