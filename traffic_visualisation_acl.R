@@ -50,12 +50,54 @@ lapply(individ_vehicles, class)
 
 #summarise all the data together to use it
 vehicle_agg_df <- individ_vehicles %>%
-  group_by(Vehicle_ID) %>%
-  arrange(Frame_ID) %>%
-  mutate(lane_changed = if_else((Lane_ID - lag(Lane_ID))!=0,
+  group_by(Vehicle_ID, O_Zone, D_Zone) %>%
+  arrange(Vehicle_ID, O_Zone, D_Zone, Global_Time) %>%
+  mutate(lane_changed = if_else((Lane_ID != lag(Lane_ID)) 
+                                & Section_ID > 0,
                                 1,
                                 0)) %>%
   summarise(average_speed = sum(v_Vel)/n(), 
             sum_accel = sum(abs(v_Acc)), 
-            n_lane_changes = sum(lane_changed))
-  
+            avg_accel = mean(abs(v_Acc)),
+            n_lane_changes = sum(lane_changed, 
+                                 na.rm = TRUE))
+
+summary(vehicle_agg_df)
+
+
+#add in lane changed row only
+vehicle_agg_df_lane_changed <- individ_vehicles %>%
+  group_by(Vehicle_ID, O_Zone, D_Zone) %>%
+  arrange(Vehicle_ID, O_Zone, D_Zone, Global_Time) %>%
+  mutate(lane_changed = if_else((Lane_ID != lag(Lane_ID)) 
+                                & Section_ID == lag(Section_ID),
+                                1,
+                                0))
+
+summary(vehicle_agg_df_lane_changed)
+
+subset_driver <- vehicle_agg_df_lane_changed[vehicle_agg_df_lane_changed$Vehicle_ID==118, ]
+
+max(subset_driver$Frame_ID)-min(subset_driver$Frame_ID)
+
+summary(subset_driver)
+
+sum(subset_driver$)
+
+max(subset_driver$Global_Time)-min(subset_driver$Global_Time)
+
+hist(subset_driver$lane_changed)
+
+summary(subset_driver)
+
+hist(vehicle_agg_df$n_lane_changes)
+
+sum(vehicle_agg_df[vehicle_agg_df$n_lane_changes ==0, ])
+
+length(unique(vehicle_agg_df$Vehicle_ID))
+
+length(vehicle_agg_df[vehicle_agg_df$n_lane_changes ==0, ])
+
+length(subset(vehicle_agg_df, n_lane_changes ==0))
+
+hist
