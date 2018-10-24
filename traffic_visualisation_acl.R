@@ -40,27 +40,22 @@ plotRGB(atlanta_peach_brick)
 crs(atlanta_peach_brick)
 
 #find out the column names for aggregating the data
-
 colnames(individ_vehicles)
 
+#look up classes
 lapply(individ_vehicles, class)
 
-#add cumulative lane change counter for vehicles
-individ_vehicles$cumu_lan_change <- for(i in individ_vehicles$Vehicle_ID){
-  for j in individ_vehicles$Frame_ID[i]{
-    if individ_vehicles$Lane_ID[j] != individ_vehicles$Lane_ID[j-1]
-    
-  }
-}
+#see the kinds of answers that come up
 
+
+#summarise all the data together to use it
 vehicle_agg_df <- individ_vehicles %>%
   group_by(Vehicle_ID) %>%
   arrange(Frame_ID) %>%
+  mutate(lane_changed = if_else((Lane_ID - lag(Lane_ID))!=0,
+                                1,
+                                0)) %>%
   summarise(average_speed = sum(v_Vel)/n(), 
             sum_accel = sum(abs(v_Acc)), 
-            n_lane_changes = if(Frame_ID))
-
-vehicle_agg_df <- group_by(individ_vehicles, Vehicle_ID)
-
-arrange(vehicle_agg_df)
+            n_lane_changes = sum(lane_changed))
   
