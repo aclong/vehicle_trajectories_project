@@ -25,6 +25,7 @@ individ_vehicles <- read.csv(paste0(data_folder, "NGSIM_Peachtree_Vehicle_Trajec
 #now get some packages that you want
 library(raster)
 library(dplyr)
+library(ggplot2)
 
 #load in as raster
 atlanta_peach_raster <- raster(paste0(data_folder, "Atlanta-Peachtree.tif"))
@@ -62,42 +63,28 @@ vehicle_agg_df <- individ_vehicles %>%
             n_lane_changes = sum(lane_changed, 
                                  na.rm = TRUE))
 
+#check out new datasset
 summary(vehicle_agg_df)
 
+#check classes
+lapply(vehicle_agg_df, class)
 
-#add in lane changed row only
-vehicle_agg_df_lane_changed <- individ_vehicles %>%
-  group_by(Vehicle_ID, O_Zone, D_Zone) %>%
-  arrange(Vehicle_ID, O_Zone, D_Zone, Global_Time) %>%
-  mutate(lane_changed = if_else((Lane_ID != lag(Lane_ID)) 
-                                & Section_ID == lag(Section_ID),
-                                1,
-                                0))
+#add lane change 
+vehicle_agg_df <- vehicle_agg_df %>%
+  mutate(lane_chagne_cuts = as.integer(cut(n_lane_changes, 
+                                           breaks = c(seq(-1,10,1)),
+                                           left = TRUE,
+                                           include.lowest = TRUE,
+                                           dig.lab = 11))
+         -1)
 
-summary(vehicle_agg_df_lane_changed)
+#change lane changes to int
+vehicle_agg_df$n_lane_changes <- as.integer(vehicle_agg_df$n_lane_changes)
 
-subset_driver <- vehicle_agg_df_lane_changed[vehicle_agg_df_lane_changed$Vehicle_ID==118, ]
+#see histogram of lane changes
+hist(vehicle_agg_df$lane_change_cuts)
 
-max(subset_driver$Frame_ID)-min(subset_driver$Frame_ID)
+ggplot(vehicle_agg_df) +
+  geom_histogram(aes(x = vehicle_agg_df$n_lane_changes), binwidth = 1)
 
-summary(subset_driver)
-
-sum(subset_driver$)
-
-max(subset_driver$Global_Time)-min(subset_driver$Global_Time)
-
-hist(subset_driver$lane_changed)
-
-summary(subset_driver)
-
-hist(vehicle_agg_df$n_lane_changes)
-
-sum(vehicle_agg_df[vehicle_agg_df$n_lane_changes ==0, ])
-
-length(unique(vehicle_agg_df$Vehicle_ID))
-
-length(vehicle_agg_df[vehicle_agg_df$n_lane_changes ==0, ])
-
-length(subset(vehicle_agg_df, n_lane_changes ==0))
-
-hist
+                 
