@@ -26,6 +26,9 @@ individ_vehicles <- read.csv(paste0(data_folder, "NGSIM_Peachtree_Vehicle_Trajec
 library(raster)
 library(dplyr)
 library(ggplot2)
+library(cowplot)
+
+install.packages("cowplot")
 
 #load in as raster
 atlanta_peach_raster <- raster(paste0(data_folder, "Atlanta-Peachtree.tif"))
@@ -52,7 +55,7 @@ lapply(individ_vehicles, class)
 #summarise all the data together to use it
 vehicle_agg_df <- individ_vehicles %>%
   group_by(Vehicle_ID, O_Zone, D_Zone) %>%
-  arrange(Vehicle_ID, O_Zone, D_Zone, Global_Time) %>%
+  arrange(Vehicle_ID, O_Zone, D_Zone, Global_Time, v_Class, v_length, v_Width) %>%
   mutate(lane_changed = if_else((Lane_ID != lag(Lane_ID)) 
                                 & Section_ID > 0,
                                 1,
@@ -61,7 +64,10 @@ vehicle_agg_df <- individ_vehicles %>%
             sum_accel = sum(abs(v_Acc)), 
             avg_accel = mean(abs(v_Acc)),
             n_lane_changes = sum(lane_changed, 
-                                 na.rm = TRUE))
+                                 na.rm = TRUE),
+            tot_time = max(Global_Time) - min(Global_Time),
+            median_direction = median(Direction),
+            median_section = median(Section_ID))
 
 #check out new datasset
 summary(vehicle_agg_df)
@@ -84,7 +90,8 @@ vehicle_agg_df$n_lane_changes <- as.integer(vehicle_agg_df$n_lane_changes)
 #see histogram of lane changes
 hist(vehicle_agg_df$lane_change_cuts)
 
+#histogram
 ggplot(vehicle_agg_df) +
   geom_histogram(aes(x = vehicle_agg_df$n_lane_changes), binwidth = 1)
 
-                 
+#checkt a plot of lane changes against everyting else                 
