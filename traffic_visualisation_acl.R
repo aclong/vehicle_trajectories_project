@@ -27,8 +27,11 @@ library(raster)
 library(dplyr)
 library(ggplot2)
 library(cowplot)
-
-install.packages("cowplot")
+library(corrplot)
+library(psych)
+library(GPArotation)
+library(rgdal)
+library(rgeos)
 
 #load in as raster
 atlanta_peach_raster <- raster(paste0(data_folder, "Atlanta-Peachtree.tif"))
@@ -55,19 +58,25 @@ lapply(individ_vehicles, class)
 #summarise all the data together to use it
 vehicle_agg_df <- individ_vehicles %>%
   group_by(Vehicle_ID, O_Zone, D_Zone) %>%
-  arrange(Vehicle_ID, O_Zone, D_Zone, Global_Time, v_Class, v_length, v_Width) %>%
+  arrange(Vehicle_ID, O_Zone, D_Zone, Global_Time) %>%
   mutate(lane_changed = if_else((Lane_ID != lag(Lane_ID)) 
                                 & Section_ID > 0,
                                 1,
                                 0)) %>%
-  summarise(average_speed = sum(v_Vel)/n(), 
+  summarise(vehic_class = median(v_Class),
+            vehic_length = median(v_length),
+            vehic_width = median(v_Width),
+            avg_speed = sum(v_Vel)/n(), 
             sum_accel = sum(abs(v_Acc)), 
             avg_accel = mean(abs(v_Acc)),
             n_lane_changes = sum(lane_changed, 
                                  na.rm = TRUE),
             tot_time = max(Global_Time) - min(Global_Time),
+            trip_start_time = min(Global_Time),
+            trip_end_time = max(Global_Time),
             median_direction = median(Direction),
-            median_section = median(Section_ID))
+            median_section = median(Section_ID)) %>%
+  mutate(lane_changes_per_globtime = n_lane_changes/tot_time)
 
 #check out new datasset
 summary(vehicle_agg_df)
@@ -75,14 +84,18 @@ summary(vehicle_agg_df)
 #check classes
 lapply(vehicle_agg_df, class)
 
-#add lane change 
+#add lane change bins
 vehicle_agg_df <- vehicle_agg_df %>%
-  mutate(lane_chagne_cuts = as.integer(cut(n_lane_changes, 
-                                           breaks = c(seq(-1,10,1)),
-                                           left = TRUE,
-                                           include.lowest = TRUE,
-                                           dig.lab = 11))
-         -1)
+  mutate(lane_change_cuts = if_else(n_lane_changes < 15, 
+                                    as.integer(cut(n_lane_changes, 
+                                                   breaks = c(seq(-0.5,15.5,1)),
+                                                   labels = c(seq(0,15,1)),
+                                                   left = FALSE,
+                                                   include.lowest = TRUE,
+                                                   dig.lab = 11))-1,
+                                    15))
+
+
 
 #change lane changes to int
 vehicle_agg_df$n_lane_changes <- as.integer(vehicle_agg_df$n_lane_changes)
@@ -90,8 +103,33 @@ vehicle_agg_df$n_lane_changes <- as.integer(vehicle_agg_df$n_lane_changes)
 #see histogram of lane changes
 hist(vehicle_agg_df$lane_change_cuts)
 
+
 #histogram
 ggplot(vehicle_agg_df) +
   geom_histogram(aes(x = vehicle_agg_df$n_lane_changes), binwidth = 1)
 
-#checkt a plot of lane changes against everyting else                 
+#get column names for dataframe
+colnames(vehicle_agg_df)
+
+#checkt a plot of lane changes against everyting else
+ggplot(vehicle_agg_df, aes(x = lane_change_cuts, y = avg_speed)) +
+  geom_point() +
+  stat_smooth(method=lm)
+
+ggplot(vehicle_agg_df, aes(x = lane_change_cuts, y = avg_accel)) +
+  geom_point() +
+  stat_smooth(method=lm)
+
+ggplot(vehicle_agg_df, aes(x = lane_change_cuts, y = sum_accel)) +
+  geom_point() +
+  stat_smooth(method=lm)
+
+ggplot(vehicle_agg_df, aes(x = lane_change_cuts, y = vehic_class)) +
+  geom_point() +
+  stat_smooth(method=lm)
+
+ggplot(vehicle_agg_df, aes(x = lane_change_cuts, y = median_section)) +
+  geom_point() +
+  stat_smooth(method=lm)
+
+#now to normalise some of the data
