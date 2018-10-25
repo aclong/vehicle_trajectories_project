@@ -22,6 +22,36 @@ detector_data <- read.csv(paste0(data_folder, "detector-data.csv"))
 #this is the data on the individual vehicles
 individ_vehicles <- read.csv(paste0(data_folder, "NGSIM_Peachtree_Vehicle_Trajectories.csv"))
 
+#test the datetime of the dataset
+individ_vehicles$Global_Time_check <- as.POSIXlt(individ_vehicles$Global_Time, 
+                                                 origin = '1970-01-01', 
+                                                 tz = 'EST')
+
+min(individ_vehicles$Global_Time_check)
+max(individ_vehicles$Global_Time_check)
+
+hist(individ_vehicles$Global_Time_check)
+
+#try cutting up global time by hour
+individ_vehicles$Global_Time_cut <- as.numeric(cut(individ_vehicles$Global_Time, breaks = seq(min(individ_vehicles$Global_Time)-216000, max(individ_vehicles$Global_Time)+216000, 216000)))
+
+hist(individ_vehicles$Global_Time_cut)
+
+#cut them up to see the spred over time
+individ_vehicles$date <- date(individ_vehicles$Global_Time_check)
+
+hist(individ_vehicles$date)
+
+individ_vehicles$day_cut_num <- as.numeric(individ_vehicles$day_cut)
+
+hist(individ_vehicles$day_cut_num)
+
+
+
+#create bar chart of the frequency over
+ggplot(individ_vehicles$day_cut) +
+  geom_bar(aes(x = individ_vehicles$day_cut))
+
 #now get some packages that you want
 library(raster)
 library(dplyr)
@@ -32,6 +62,7 @@ library(psych)
 library(GPArotation)
 library(rgdal)
 library(rgeos)
+library(lubridate)
 
 #load in as raster
 atlanta_peach_raster <- raster(paste0(data_folder, "Atlanta-Peachtree.tif"))
@@ -66,18 +97,18 @@ vehicle_agg_df <- individ_vehicles %>%
   summarise(vehic_class = median(v_Class),
             vehic_length = median(v_length),
             vehic_width = median(v_Width),
+            median_direction = median(Direction),
+            median_section = median(Section_ID),
+            trip_start_time = min(Global_Time),
+            trip_end_time = max(Global_Time),
+            tot_time_mins = max(Global_Time/3600) - min(Global_Time/3600),
             avg_speed = sum(v_Vel)/n(), 
             sum_accel = sum(abs(v_Acc)), 
             avg_accel = mean(abs(v_Acc)),
             n_lane_changes = sum(lane_changed, 
-                                 na.rm = TRUE),
-            tot_time = max(Global_Time) - min(Global_Time),
-            trip_start_time = min(Global_Time),
-            trip_end_time = max(Global_Time),
-            median_direction = median(Direction),
-            median_section = median(Section_ID)) %>%
-  mutate(lane_changes_per_globtime = n_lane_changes/tot_time,
-         sum_accel_per_tottime = sum_accel/tot_time)
+                                 na.rm = TRUE)) %>%
+  mutate(lane_changes_per_min = n_lane_changes/tot_time_mins,
+         sum_accel_per_min = sum_accel/tot_time_mins)
 
 #check out new datasset
 summary(vehicle_agg_df)
@@ -163,3 +194,9 @@ make_hist(vehicle_agg_df$sum_accel)
 
 #look at a corrplot of all these
 pairs.panels(vehicle_agg_df[ , 7:17])
+
+multi.hist(vehicle_agg_df[ , 9:18])
+
+#check out the time variable to make sure that it works
+vehicle_agg_df$trip_start_date_time <- as.POSIXct(vehicle_agg_df$trip_start_time, origin = '1970-01-01', tz = 'EDT')
+
