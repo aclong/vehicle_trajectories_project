@@ -76,7 +76,8 @@ vehicle_agg_df <- individ_vehicles %>%
             trip_end_time = max(Global_Time),
             median_direction = median(Direction),
             median_section = median(Section_ID)) %>%
-  mutate(lane_changes_per_globtime = n_lane_changes/tot_time)
+  mutate(lane_changes_per_globtime = n_lane_changes/tot_time,
+         sum_accel_per_tottime = sum_accel/tot_time)
 
 #check out new datasset
 summary(vehicle_agg_df)
@@ -116,6 +117,10 @@ ggplot(vehicle_agg_df, aes(x = lane_change_cuts, y = avg_speed)) +
   geom_point() +
   stat_smooth(method=lm)
 
+ggplot(vehicle_agg_df, aes(x = lane_change_cuts, y = sum_accel_per_tottime)) +
+  geom_point() +
+  stat_smooth(method=lm)
+
 ggplot(vehicle_agg_df, aes(x = lane_change_cuts, y = avg_accel)) +
   geom_point() +
   stat_smooth(method=lm)
@@ -132,4 +137,29 @@ ggplot(vehicle_agg_df, aes(x = lane_change_cuts, y = median_section)) +
   geom_point() +
   stat_smooth(method=lm)
 
-#now to normalise some of the data
+
+
+#now to look at the data and ckecj for distribution
+#function to make histogram with mean and median of variable
+
+make_hist <- function(variable){
+  hist(variable, plot = T, prob = T) +
+    lines(density(variable),
+          lwd = 2,
+          col = "chocolate3") +
+    abline(v = mean(variable),
+           col = "royalblue",
+           lwd = 2) +
+    abline(v = median(variable),
+           col = "red",
+           lwd = 2)
+}
+
+make_hist(vehicle_agg_df$lane_change_cuts)
+
+make_hist(vehicle_agg_df$avg_speed)
+
+make_hist(vehicle_agg_df$sum_accel)
+
+#look at a corrplot of all these
+pairs.panels(vehicle_agg_df[ , 7:17])
