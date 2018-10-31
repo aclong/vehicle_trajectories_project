@@ -48,3 +48,18 @@ individ_vehicles_sub <- individ_vehicles %>%
 #now test out the subset to see what's in it
 length(unique(individ_vehicles_sub$Vehicle_ID))
 
+#now find out the changing points of the section
+#get every first and last coordinate of a car within the segment
+
+first_and_last <- individ_vehicles_sub %>% 
+  mutate(first_entry = if_else((Section_ID != lag(Section_ID)) 
+                                & Section_ID == 5,
+                                1,
+                                0),
+         last_exit = if_else((Section_ID != lead(Section_ID)) 
+                             & Section_ID == 5,
+                             1,
+                             0)) %>%
+  
+  filter(first_entry == 1 | last_exit == 1,
+         Direction = )
