@@ -45,3 +45,6 @@ individ_vehicles_sub <- individ_vehicles %>%
            lag(Section_ID == section_number, n = lag_number) |
            lead(Section_ID == section_number, n = lag_number))
 
+#now test out the subset to see what's in it
+length(unique(individ_vehicles_sub$Vehicle_ID))
+
