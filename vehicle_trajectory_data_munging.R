@@ -18,6 +18,14 @@ data_folder <- "/data/store05/phd/data/zcfajat/LA Traffic Highway Detector Data 
 #there is an average speed per lane as well as number of vehicles in each lane
 detector_data <- read.csv(paste0(data_folder, "detector-data.csv"))
 
+max(detector_data$Global_Time)
+
+detector_data$Global_Time_check <- as.POSIXlt(detector_data$Global_Time/1000, 
+                                                 origin = '1970-01-01', 
+                                                 tz = 'EDT')
+
+min(detector_data$Global_Time_check)
+max(detector_data$Global_Time_check)
 
 #this is the data on the individual vehicles
 individ_vehicles <- read.csv(paste0(data_folder, "NGSIM_Peachtree_Vehicle_Trajectories.csv"))
@@ -25,32 +33,64 @@ individ_vehicles <- read.csv(paste0(data_folder, "NGSIM_Peachtree_Vehicle_Trajec
 #test the datetime of the dataset
 individ_vehicles$Global_Time_check <- as.POSIXlt(individ_vehicles$Global_Time, 
                                                  origin = '1970-01-01', 
-                                                 tz = 'EST')
+                                                 tz = 'EDT')
 
+#look at global time as it is
+min(individ_vehicles$Global_Time)
+max(individ_vehicles$Global_Time)
+
+max(individ_vehicles$Global_Time) - min(individ_vehicles$Global_Time)
+
+#look at global time in posix
 min(individ_vehicles$Global_Time_check)
 max(individ_vehicles$Global_Time_check)
 
 hist(individ_vehicles$Global_Time_check)
 
-#try cutting up global time by hour
-individ_vehicles$Global_Time_cut <- as.numeric(cut(individ_vehicles$Global_Time, breaks = seq(min(individ_vehicles$Global_Time)-216000, max(individ_vehicles$Global_Time)+216000, 216000)))
 
-hist(individ_vehicles$Global_Time_cut)
+#look at histogams of time to see the spread
+day_hist <- ggplot(individ_vehicles, aes(x = Global_Time_check)) + 
+  geom_histogram() +
+  theme_bw() + 
+  xlab(NULL) +
+  scale_x_datetime(breaks = date_breaks("days"))
 
-#cut them up to see the spred over time
-individ_vehicles$date <- date(individ_vehicles$Global_Time_check)
+day_hist
 
-hist(individ_vehicles$date)
+hour_hist <- ggplot(individ_vehicles, aes(x = Global_Time_check)) + 
+  geom_histogram() +
+  theme_bw() + 
+  xlab(NULL) +
+  scale_x_datetime(breaks = date_breaks("hours"))
 
-individ_vehicles$day_cut_num <- as.numeric(individ_vehicles$day_cut)
+hour_hist
 
-hist(individ_vehicles$day_cut_num)
+glob_time_hist <- ggplot(individ_vehicles, aes(x = Global_Time)) +
+  geom_histogram(binwidth = 10000)
 
+glob_time_hist
 
+#there is clearly an issue with the metadata as there are continuous entries througout the time scale given.
+#compare thi dataset with the lankerhim dataset to compare
 
-#create bar chart of the frequency over
-ggplot(individ_vehicles$day_cut) +
-  geom_bar(aes(x = individ_vehicles$day_cut))
+lankershim_individ_vehicles <- read.csv(paste0(getwd(),"/Data/NGSIM__Lankershim_Vehicle_Trajectories.csv"))
+
+#check time histograms of this data set
+glob_time_hist <- ggplot(lankershim_individ_vehicles, aes(x = Global_Time)) +
+  geom_histogram(binwidth = 100000)
+
+glob_time_hist
+
+#look at min max of this
+min(lankershim_individ_vehicles$Global_Time)
+
+#translate into posix
+lankershim_individ_vehicles$Global_Time_datetime <- as.POSIXlt(lankershim_individ_vehicles$Global_Time/1000, 
+                                                                  origin = '1970-01-01', 
+                                                                  tz = 'America/Los_Angeles')
+
+min(lankershim_individ_vehicles$Global_Time_datetime)
+max(lankershim_individ_vehicles$Global_Time_datetime)
 
 #now get some packages that you want
 library(raster)
@@ -63,6 +103,9 @@ library(GPArotation)
 library(rgdal)
 library(rgeos)
 library(lubridate)
+library(graphics)
+library(scales)
+
 
 #load in as raster
 atlanta_peach_raster <- raster(paste0(data_folder, "Atlanta-Peachtree.tif"))
